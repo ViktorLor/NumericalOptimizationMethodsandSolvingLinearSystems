@@ -1,86 +1,36 @@
 import numpy as np
-from numerical_optimization.Project.Version2 import generating_functions as gf
-import optimization_methods as om
-import time
-import matplotlib.pyplot as plt
-import sys
+import generating_functions as gf
+import optimization as om
+import timeit
+from matplotlib import pyplot as plt
 
-dimensions = 2
-residual_squares = False
-
-if dimensions == 1:
-	my_func = lambda x: x * +4 - 2 / 3 * x ** 3 - x ** 2 / 2 + 2 * x
-	starting_point = np.array(-4, dtype=np.float32)
-	gf.plot_1d_figure(-4, 4, my_func)
-	x1 = -2
-	print(f'Known solutions: {x1}')
-	
-	x = [x1]
-	print('Steepest Descent')
-	start_time = time.time()
-	iterates = om.steepest_descent_1d(my_func, starting_point)
-	print("Time taken: %s seconds\\\\" % (time.time() - start_time))
-	gf.print_statistics(x, my_func, iterates)
-	
-	print('Newton')
-	start_time = time.time()
-	iterates = om.newton_method_1d(my_func, starting_point)
-	print("Time taken: %s seconds\\\\" % (time.time() - start_time))
-	gf.print_statistics(x, my_func, iterates)
-	
-	start_time = time.time()
-	print('Conjugate Gradient')
-	iterates = om.conjugate_gradient_1d(my_func, starting_point)
-	print("Time taken: %s seconds\\\\" % (time.time() - start_time))
-	gf.print_statistics(x, my_func, iterates)
-	
-	start_time = time.time()
-	print('Quasi-Newton')
-	iterates = om.quasi_newton_method_1d(my_func, starting_point)
-	print("Time taken: %s seconds\\\\" % (time.time() - start_time))
-	gf.print_statistics(x, my_func, iterates)
-
-if dimensions == 2:
+### Rosenbrock and CO
+if False:
 	
 	my_func = gf.function_2()
-	gf.plot_2d_figure(-5, 5, my_func)
-	starting_point = np.array([-1.2,1], dtype=np.float32)
-	known_minimzer = [[0,0]]
 	
-	#print('Steepest Descent')
-	#start_time = time.time()
-	#iterates = om.steepest_descent(my_func, starting_point)
-	#print("Time taken: %s seconds\\\\" % (time.time() - start_time))
-	#gf.print_statistics(known_minimzer, my_func, iterates)
+	gf.plot_2d_figure(-10, 10, my_func)
 	
-	#print('Conjugate Gradient')
-	#start_time = time.time()
-	#iterates = om.conjugate_gradient(my_func, starting_point)
-	#print("Time taken: %s seconds\\\\" % (time.time() - start_time))
-	#gf.print_statistics(known_minimzer, my_func, iterates)
+	starting_points = [np.array([-0.2, 1.2], dtype=float), np.array([3.8, 0.1], dtype=float),
+	                   np.array([0, 0], dtype=float), np.array([-1, 0], dtype=float), np.array([0, -1], dtype=float)]
 	
-	#print('Quasi-Newton')
-	#start_time = time.time()
-	#iterates = om.quasi_newton_method(my_func, starting_point)
-	#print("Time taken: %s seconds\\\\" % (time.time() - start_time))
-	#gf.print_statistics(known_minimzer, my_func, iterates)
-	
-	print('Newton Method')
-	start_time = time.time()
-	iterates = om.newton_method(my_func, starting_point)
-	print("Time taken: %s seconds\\\\" % (time.time() - start_time))
-	gf.print_statistics(known_minimzer, my_func, iterates)
-	
+	for starting_point in starting_points[0:3]:
+		
+		print("StartingPoint: ", starting_point,"\\\\")
+		Optimization = om.Optimization(starting_point, my_func)
+		solution = Optimization.conjugate_gradient()
+		print("Iterations: ", len(solution),"\\\\")
+		print("Found Solution: ", solution[-1],"\\\\")
+		print("Distance to Solution [0,1]: ",solution[-1] - np.array([0,1]),"\\\\")
+		print("Distance to Solution: [4,0]", solution[-1] - np.array([4,0]), "\\\\")
+		print("-------------","\\\\")
 
+### Residuals
 
-	
-
-
-if residual_squares:
-	sys.setrecursionlimit(1500)
-	q = 1.5  # interval
-	m = 50  # data samples
-	n = 5  # degree
+if True:
+	q = 2.5  # interval
+	m = 100  # data samples
+	n = 5 # degree
 	rng = np.random.default_rng()
 	m = rng.uniform(-q, q, m)  # points
 	my_func, rjs = gf.least_squares(m, n)  # my_func returns func(x), [residual(x) for residuals]
@@ -96,34 +46,61 @@ if residual_squares:
 	plt.scatter(m, np.sin(m))
 	X = np.linspace(-q, q, 1000)
 	plt.plot(X, np.sin(X))
-	
-	print('Newton Method')
-	start_time = time.time()
-	iterates = om.newton_method(my_func, rjs, B, starting_point)
-	print("Time taken: %s seconds\\\\" % (time.time() - start_time))
-	print(iterates[-1])
-	print(my_func(iterates[-1]))
-	f = gf.test_least_squares(iterates[-1])
-	plt.plot(X, f(X), 'r')
 	plt.show()
+	####Preparation
 	
-	print('Conjugate Gradient')
-	start_time = time.time()
-	iterates = om.conjugate_gradient(my_func, rjs, B, starting_point)
-	print("Time taken: %s seconds\\\\" % (time.time() - start_time))
-	print(iterates[-1])
-	print(my_func(iterates[-1]))
-	
-	print('Quasi-Newton')
-	start_time = time.time()
-	iterates = om.quasi_newton_method(my_func, rjs, B, starting_point)
-	print("Time taken: %s seconds\\\\" % (time.time() - start_time))
-	print(iterates[-1])
-	print(my_func(iterates[-1]))
-	
-	print('Steepest Descent')
-	start_time = time.time()
-	iterates = om.steepest_descent(my_func, rjs, B, starting_point)
-	print("Time taken: %s seconds\\\\" % (time.time() - start_time))
-	print(iterates[-1])
-	print(my_func(iterates[-1]))
+	OptimizationR = om.ResidualOptimization(starting_point, my_func)
+	solution = OptimizationR.steepest_descent(rjs, B)
+	print("Steepest Descent")
+	print("Iterations: ", len(solution), "\\\\")
+	print("Found Solution: ", solution[-1], "\\\\")
+	print("-------------", "\\\\")
+
+	f = gf.test_least_squares(solution[-1])
+	plt.plot(X, f(X), 'r')
+	func = gf.taylor_sin(20)
+	plt.plot(X, func(X), 'b')
+	plt.scatter(m, np.sin(m))
+	plt.show()
+
+	OptimizationR = om.ResidualOptimization(starting_point, my_func)
+	solution = OptimizationR.newton_method(rjs,B)
+	print("Newton\\\\")
+	print("Iterations: ", len(solution), "\\\\")
+	print("Found Solution: ", solution[-1], "\\\\")
+	print("-------------", "\\\\")
+
+	f = gf.test_least_squares(solution[-1])
+	plt.plot(X, f(X), 'r')
+	func = gf.taylor_sin(20)
+	plt.plot(X, func(X),'b')
+	plt.scatter(m, np.sin(m))
+	plt.show()
+
+	OptimizationR = om.ResidualOptimization(starting_point, my_func)
+	solution = OptimizationR.quasi_newton_method(rjs,B)
+	print("Quasi_newton\\\\")
+	print("Iterations: ", len(solution), "\\\\")
+	print("Found Solution: ", solution[-1], "\\\\")
+	print("-------------", "\\\\")
+
+	f = gf.test_least_squares(solution[-1])
+	plt.plot(X, f(X), 'r')
+	func = gf.taylor_sin(20)
+	plt.plot(X, func(X),'b')
+	plt.scatter(m, np.sin(m))
+	plt.show()
+
+	OptimizationR = om.ResidualOptimization(starting_point, my_func)
+	solution = OptimizationR.conjugate_gradient(rjs,B)
+	print("Conjugate_gradient\\\\")
+	print("Iterations: ", len(solution), "\\\\")
+	print("Found Solution: ", solution[-1], "\\\\")
+	print("-------------", "\\\\")
+
+	f = gf.test_least_squares(solution[-1])
+	plt.plot(X, f(X), 'r')
+	func = gf.taylor_sin(20)
+	plt.plot(X, func(X),'b')
+	plt.scatter(m, np.sin(m))
+	plt.show()
