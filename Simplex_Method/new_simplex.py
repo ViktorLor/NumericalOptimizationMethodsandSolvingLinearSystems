@@ -2,29 +2,27 @@ import numpy as np
 
 ### 2 Problems with 5-10 variables
 # Enter the Matrix A
-A = np.asarray([[0, 1],
-                [3, 1]])
+A = np.asarray([[2, 1, 1],
+                [1, -1, -1]])
 
+tmp = np.diag(v=np.ones(shape=A.shape[0]))
+A = np.concatenate((A, tmp),axis=1)
 
-tmp = np.diag(v=np.ones(shape=A.shape[1]))
+#Choose Initial B = slack variables
+B_i = [3, 4]
 
-Aplus = np.hstack((A, tmp))
-
-# Calculate Problem size:
-n = A.shape[0]
-# Choose Initial B = slack variables
-B_i = [2, 3]
+# simplex_method(x,B_i,A_,b,c)
 # N = inverse of B
 
 # Choose b as boundary
-b = np.asarray([3, 4])
-# all variables and their respective values in their functions, including slack variables
-c = np.asarray([-3, -3, 0, 0])
+b = np.asarray([2, -1])
+# all variables and their respective values in their functions
+c = np.asarray([3, 1, 1])
 
 
 # function to optimize:
 def f(x):
-    return - 3 * x[0] - 3 * x[1]
+    return 3 * x[0] + 1 * x[1] + 1 * x[2]
 
 
 print('A:\n', A)
@@ -32,9 +30,43 @@ print('b:', b)
 print('Function to minimize', c)
 
 
-def simplex_method(B_i, A, b, c):
+def find_starting_point_simplex_method(A, b, c):
+    E = np.zeros(shape=(b.shape[0], b.shape[0]))
+    z = np.copy(b)
+    for i, b_ele in enumerate(b):
+        if b_ele >= 0:
+            E[i, i] = 1
+        else:
+            E[i, i] = -1
+            z[i] = - b_ele
+
+    # x starting point is equal to c
+    x = np.zeros_like(c)
+    x = np.concatenate((x, z))
+
+    c_E = np.ones_like(z)
+    # create function values equal to c.T*z
+    c = np.zeros_like(c)
+    c = np.concatenate((c, c_E))
+    # concatenate those slack variables
+    B_i = list(range(A.shape[1], c.shape[0]))
+    A = np.concatenate((A, E), axis=1)
+
+    x = simplex_method(x, B_i, A, b, c)
+    print(x)
+    return x
+
+
+def simplex_method(x, B_i, A, b, c):
+    """
+    x: Starting point of simplex_method
+    B_i: Indices of B
+    A: constraints
+    b: boundaries
+    c: multiplier for the function in the end
+    """
+
     x_N = 0
-    x = np.zeros(shape=(c.shape[0]))
     N_i = [x for x in range(0, c.shape[0]) if x not in B_i]
     while True:
 
@@ -47,10 +79,10 @@ def simplex_method(B_i, A, b, c):
             x[B_i[i]] = x_b_ele
         x[N_i] = 0
 
-        print("x_B:", x_B)
+        # print("x_B:", x_B)
         lambda_ = B_inverse.T @ c[B_i]
         s_N = c[N_i] - A[:, N_i].T @ lambda_
-        print("s_N: ", s_N)
+        # print("s_N: ", s_N)
         print("lambda_: ", lambda_)
         if np.all(s_N >= 0):
             return x
@@ -95,11 +127,15 @@ def simplex_method(B_i, A, b, c):
 
         print("x: ", x)
         print("B_i: ", B_i)
-        print("N_i: ", N_i)
+        # print("N_i: ", N_i)
         print('f(x) = ', f(x[0:c.shape[0]]))
         print("Next step -----")
 
 
-x = simplex_method(B_i, A, b, c)
-print("Solution x: ", x)
-print("f(x)", f(x))
+# calculate feasible starting_point
+x = find_starting_point_simplex_method(A, b, c)
+
+
+# x = simplex_method(B_i, A, b, c)
+# print("Solution x: ", x)
+# print("f(x)", f(x))
