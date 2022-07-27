@@ -1,0 +1,38 @@
+# Run 1: Featuring an unfeasible starting point:
+------
+# Enter the Matrix A
+A = np.asarray([[2, 1, 1],
+                [1, -1, -1]])
+# Define Boundary
+b = np.asarray([2, -1])
+# define function value
+c = np.asarray([3, 1, 1])
+
+my_simplex = Simplex(A, b, c)
+
+# Finds a feasible starting point automatically
+my_simplex.feasible_start()
+# Runs a method with starting point x = 0
+# solution = my_simplex.simplex_run()
+
+my_simplex.stat()
+-----
+# Run 2: Featuring the textbook solution:
+-----
+# Enter the Matrix A
+A = np.asarray([[1, 1],
+                [2, 0.5]])
+# Define Boundary
+b = np.asarray([5, 8])
+# define function value
+c = np.asarray([-4, -2])
+
+my_simplex = Simplex(A, b, c)
+
+# Finds a feasible starting point automatically
+# my_simplex.feasible_start()
+# Runs a method with starting point x = 0
+solution = my_simplex.simplex_run()
+
+my_simplex.stat()
+-----

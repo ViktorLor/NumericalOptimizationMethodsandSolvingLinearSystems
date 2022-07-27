@@ -26,6 +26,9 @@ class Simplex:
         return self.c @ self.x
 
     def feasible_start(self):
+        # One could improve this method by deleting slack variables with E[i,i] = 1
+        # This is not done due it costing time and it barely improves the time efficency.
+
         E = np.zeros(shape=(b.shape[0], b.shape[0]))
         z = np.copy(self.b)
         for i, b_ele in enumerate(self.b):
@@ -47,16 +50,16 @@ class Simplex:
 
     def simplex_run(self):
         N_i = [_ for _ in range(0, self.c.shape[0]) if _ not in self.B_i]  # All indices not in B are in N
+        self.x[self.B_i] = b
         while True:
             # Given step
             B = self.A[:, self.B_i]
             B_inverse = np.linalg.inv(B)
-            x_B = B_inverse @ b
-            for i, x_b_ele in enumerate(x_B):
+            for i, x_b_ele in enumerate(self.x[self.B_i]):
                 if x_b_ele < 0:
                     raise ArithmeticError("X is negative, no solution to system")
                 self.x[self.B_i[i]] = x_b_ele
-            self.x[N_i] = 0
+            # self.x[N_i] = 0
             # Solve for Lambda and s_N
             lambda_ = B_inverse.T @ self.c[self.B_i]
             s_N = self.c[N_i] - self.A[:, N_i].T @ lambda_
@@ -68,7 +71,7 @@ class Simplex:
             q = 0
             for i in range(s_N.shape[0]):
                 if (s_N[i] < 0):
-                    q = i
+                    q = N_i[i]  # Entering indice
                     break
 
             # Find values which solve the equation
@@ -83,22 +86,24 @@ class Simplex:
             for i in range(d.shape[0]):
                 if d[i] == 0:
                     continue
-                if tmp > x_B[i] / d[i]:
-                    p = i
-                    tmp = x_B[i] / d[i]
+                if tmp > self.x[self.B_i][i] / d[i]:
+                    p = self.B_i[i]  # p = Minimizing column
+                    tmp = self.x[self.B_i][i] / d[i]
                     x_qplus = tmp
 
-            q = N_i[q]
-            self.x[q] = self.x[q] - x_qplus
-
+            # Adjust x to new values
+            self.x[self.B_i] = self.x[self.B_i] - d * x_qplus
+            self.x[q] = x_qplus
             # Adjust basis
-            k = self.B_i[p]
-            a = self.B_i.index(self.B_i[p])
-            self.B_i.remove(self.B_i[p])
+
+            a = self.B_i.index(p)
+
+            self.B_i.remove(p)
             self.B_i.insert(a, q)
+
             a = N_i.index(q)
             N_i.remove(q)
-            N_i.insert(a, k)
+            N_i.insert(a, p)
             self.stat()
 
     def stat(self):
@@ -107,12 +112,12 @@ class Simplex:
 
 
 # Enter the Matrix A
-A = np.asarray([[2, 1, 1],
-                [1, -1, -1]])
+A = np.asarray([[1, 1],
+                [2, 0.5]])
 # Define Boundary
-b = np.asarray([2, -1])
+b = np.asarray([5, 8])
 # define function value
-c = np.asarray([3, 1, 1])
+c = np.asarray([-4, -2])
 
 my_simplex = Simplex(A, b, c)
 
