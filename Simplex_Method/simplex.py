@@ -13,6 +13,7 @@ import scipy.linalg as la
 class Simplex:
 	def __init__(self, A, b, c):
 		# Concatenate slack variables
+		self.s_N = None
 		A = np.concatenate((A, np.diag(v=np.ones(shape=A.shape[0]))), axis=1)
 		self.A = A
 		self.init = True
@@ -22,6 +23,7 @@ class Simplex:
 		c = np.concatenate((c, np.zeros(shape=A.shape[1] - c.shape[0])))
 		self.c = c
 		self.x = np.zeros_like(c)
+		self.size = A.shape[1]
 	
 	def function_value(self, x):
 		return self.c @ self.x
@@ -50,47 +52,51 @@ class Simplex:
 		x = self.simplex_run()
 	
 	def simplex_run(self):
+		print("A=\n", self.A[:, :c.shape[0]])
+		print("b=\n", self.b)
+		print("c=\n", self.c[:self.size])
 		N_i = [_ for _ in range(0, self.c.shape[0]) if _ not in self.B_i]  # All indices not in B are in N
-		self.x[self.B_i] = b
 		self.lu_update()
 		while True:
 			# Given step
-			# B = self.A[:, self.B_i]
-			for i, x_b_ele in enumerate(self.x[self.B_i]):
-				if x_b_ele < 0:
-					raise ArithmeticError("X is negative, no solution to system")
-				self.x[self.B_i[i]] = x_b_ele
+			
 			# Solve for Lambda and s_N
-			lambda_ = self.solve_lu_system(self.c[self.B_i], transpose=True)
-			s_N = self.c[N_i] - self.A[:, N_i].T @ lambda_
+			self.x[N_i] = 0
+			self.lambda_ = self.solve_lu_system(self.c[self.B_i], transpose=True)
+			self.s_N = self.c[N_i] - self.A[:, N_i].T @ self.lambda_
 			# check if all function values are positive
-			if np.all(s_N >= 0):
+			if np.all(self.s_N >= 0):
 				return self.x
 			
 			# find indices which are negative
 			
-			for i in range(s_N.shape[0]):
-				if (s_N[i] < 0):
+			for i in range(self.s_N.shape[0]):
+				if (self.s_N[i] < 0):
 					self.q = N_i[i]  # Entering indice
 					break
 			
 			# Find values which solve the equation
-			d = self.solve_lu_system(A[:, self.q])
 			
-			if np.all(d <= 0):
+			d = self.solve_lu_system(self.A[:, self.q])
+			
+			if np.all(d < 0):
 				print("Problem is unbounded")
 				exit(0)
 			
 			# find maximum step size to minimize
 			tmp = np.Inf
-			
+			cycling = True
 			for i in range(d.shape[0]):
-				if d[i] == 0:
-					continue
-				if tmp > self.x[self.B_i][i] / d[i]:
+				
+				if d[i] <= 0:
+					if cycling:
+						self.p = self.B_i[i]
+						continue
+				elif tmp > self.x[self.B_i][i] / d[i]:
 					self.p = self.B_i[i]  # p = Minimizing column
 					tmp = self.x[self.B_i][i] / d[i]
 					x_qplus = tmp
+					cycling = False
 			
 			# Update LU to solve the linear system
 			
@@ -107,8 +113,14 @@ class Simplex:
 			
 			a = N_i.index(self.q)
 			N_i.remove(self.q)
-			N_i.insert(a, self.p)
-			self.lu_update()  # Todo Figure out a System to use the correct variables to the right times
+			
+			if self.p > self.size:
+				self.A[:, self.p] = 0
+			else:
+				N_i.insert(a, self.p)
+			
+			self.lu_update()
+			self.stat()
 	
 	# self.stat()
 	
@@ -176,29 +188,37 @@ class Simplex:
 			tmp = b_[i]
 			for j in range(i + 1, n):
 				tmp -= self.U[i, j] * x[j]
+				
+			if self.U[i,i] == 0:
+				print("Division by 0 occured, aborting")
+				exit(1)
 			x[i] = tmp / self.U[i, i]
 		return x
 	
 	def stat(self):
-		print(f"Current x = {self.x}")
+		print(f"Current x = {self.x[:self.size]}")
+		print(f"Current g = {self.x[self.size:]}")
 		print(f"Function value = {self.function_value(self.x)}")
+		print(f"S_N = {self.s_N}")
+	# print(f"B_i = {self.B_i}")
 
 
 # Enter the Matrix A
-A = np.asarray([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 1, 0, 0, 0, 0, 0, 0]])
+A = np.asarray([[1, 0, 0, 1, 0, 1, 2, 2, 1, 1],
+                [0, -1, 0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 1, 0, 2, 0, 0, 0, 0, 0],
+                [2, 0, 0, 1, 0, 0, 1, 0, 0, 2],
+                [1, 0, 0, 0, 1, 2, 2, 0.5, 0, 1]])
 # Define Boundary
-b = np.asarray([5, 8, 2, 4])
+b = np.asarray([6, -4,3, 2, 5])
 # define function value
-c = np.asarray([-2, -3, -1, -3, 3, 4, 1, 2, 3, 4])
+c = np.asarray([-2, 1, 1, -2, -1, -2, -4, 2, -4, -2])
 
 my_simplex = Simplex(A, b, c)
 
 # Finds a feasible starting point automatically
-my_simplex.feasible_start()
+#my_simplex.feasible_start()
 # Runs a method with starting point x = 0
-# solution = my_simplex.simplex_run()
+solution = my_simplex.simplex_run()
 
 my_simplex.stat()
